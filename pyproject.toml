@@ -1,0 +1,14 @@
+[project]
+name = "littlebot"
+version = "0.1.0"
+description = "littlebot"
+readme = "README.md"
+requires-python = ">=3.8, <4.0"
+
+[tool.nonebot]
+adapters = [
+    {name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11"}
+]
+plugins = ["nonebot_plugin_gocqhttp", "nonebot_plugin_apscheduler", "nonebot_plugin_datastore", "nonebot_plugin_localstore"]
+plugin_dirs = ["littlebot/plugins"]
+builtin_plugins = ["echo", "single_session"]
