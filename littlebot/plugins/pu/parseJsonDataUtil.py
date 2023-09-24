@@ -3,8 +3,8 @@ import littlebot.plugins.pu.requestsUtil as requestsUtil
 
 
 def get_data(s, name):
-    if "time" in name.lower():
-        return format_time(s[name])
+    # if "time" in name.lower():
+    #     return format_time(s[name])
     return s[name]
 
 
@@ -20,15 +20,11 @@ def get_isAllowEvent(s):
 
 def get_reg_start_time(s):
     detail = requestsUtil.requests_eventDetail(get_data(s, "id"))
-    time_stamp = int(detail["content"]["regStartTimeStr"])
-    time_array = time.localtime(time_stamp)
-    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
-    return formatted_time
+    time_stamp = detail["content"]["regStartTimeStr"]
+    return time_stamp
 
 
 def get_reg_end_time(s):
     detail = requestsUtil.requests_eventDetail(get_data(s, "id"))
-    time_stamp = int(detail["content"]["regEndTimeStr"])
-    time_array = time.localtime(time_stamp)
-    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
-    return formatted_time
+    time_stamp = detail["content"]["regEndTimeStr"]
+    return time_stamp

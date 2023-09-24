@@ -26,8 +26,8 @@ async def generate_event_list(session,event_list_contents=""):
             data += f"""
             活动名称：{title}
             活动ID：{id}
-            报名时间：{regStartTimeStr} ~ {regEndTimeStr}
-            活动时间：{sTime} ~ {eTime}
+            报名时间：{parseJsonDataUtil.format_time(regStartTimeStr)} ~ {parseJsonDataUtil.format_time(regEndTimeStr)}
+            活动时间：{parseJsonDataUtil.format_time(sTime)} ~ {parseJsonDataUtil.format_time(eTime)}
             活动类型：{category}
             地点：{address}  人数：{joinCount}/{int(limitCount)+int(joinCount)}  分数：{credit}  
             """
@@ -50,8 +50,8 @@ async def generate_event_list(session,event_list_contents=""):
             data += f"""
             活动名称：{title}
             活动ID：{id}
-            报名时间：{regStartTimeStr} ~ {regEndTimeStr}
-            活动时间：{sTime} ~ {eTime}
+            报名时间：{parseJsonDataUtil.format_time(regStartTimeStr)} ~ {parseJsonDataUtil.format_time(regEndTimeStr)}
+            活动时间：{parseJsonDataUtil.format_time(sTime)} ~ {parseJsonDataUtil.format_time(eTime)}
             活动类型：{category}
             地点：{address}  人数：{joinCount}/{int(limitCount) + int(joinCount)}  分数：{credit}  
             """

@@ -28,10 +28,10 @@ async def select_event_by_category(session, category):
     stmt = await session.execute(select(dataModel.EventList).where(dataModel.EventList.category == category))
     return stmt.fetchall()
 
-
 async def select_all(session):
     stmt = await session.execute(select(dataModel.EventList))
     return stmt.fetchall()
+
 
 async def delete_all(session):
     stmt = await session.execute(delete(dataModel.EventList))
