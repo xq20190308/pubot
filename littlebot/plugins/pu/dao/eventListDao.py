@@ -2,8 +2,6 @@ from sqlalchemy import select, delete, update, and_, or_
 import littlebot.plugins.pu.dataModel as dataModel
 
 
-# 定义模型
-
 async def insert_event_list(session, id, title, category, address, joinCount, limitCount, credit, sTime, eTime,
                             allow_school, allow_year,
                             regStartTimeStr,

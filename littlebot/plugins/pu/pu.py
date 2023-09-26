@@ -30,7 +30,7 @@ async def getEventList(user_id, page, session, force_flush=False):
             # res_event_lists = grequests.map(event_list)
 
             res_event_lists = requests.get(
-                parseConfig.url_eventList() + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.version()}&page={i + 1}")
+                parseConfig.get_config("eventList") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&page={i + 1}")
             if not res_event_lists.ok:
                 return "获取列表失败"
             eventList = json.loads(res_event_lists.text)
@@ -80,7 +80,7 @@ async def join_event(user_id, actiId, timer, bot, session):
         return f"未达到活动报名时间，将于 {event_regStartTime.strftime('%Y-%m-%d %H:%M:%S')} 自动签到"
     else:
         res_list = requests.get(
-            parseConfig.url_eventJoin() + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
+            parseConfig.get_config("eventJoin") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
         # res_list = grequests.map(req_list, size=size)[0]
 
         if not res_list.ok:
@@ -98,7 +98,7 @@ async def timer_join(bot: Bot, user, session, actiId):
     oauth_token = user.oauth_token
     oauth_token_secret = user.oauth_token_secret
     res_list = requests.get(
-        parseConfig.url_eventJoin() + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
+        parseConfig.get_config('eventJoin') + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
     if not res_list.ok:
         result = "报名失败，未知原因"
     result = json.loads(res_list.text)["msg"]

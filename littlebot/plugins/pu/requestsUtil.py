@@ -13,7 +13,7 @@ def requests_eventDetail(user, actiId):
     oauth_token = user.oauth_token
     oauth_token_secret = user.oauth_token_secret
     event_list = requests.get(
-        parseConfig.url_eventDetail() + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.version()}&actiId={actiId}")
+        parseConfig.get_config("eventDetail") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&actiId={actiId}")
 
     if not event_list.ok:
         return "获取列表失败"

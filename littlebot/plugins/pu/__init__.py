@@ -9,7 +9,7 @@ from nonebot.plugin import PluginMetadata
 from nonebot.rule import to_me
 from nonebot_plugin_datastore import get_plugin_data, get_session
 from sqlalchemy.ext.asyncio.session import AsyncSession
-
+import littlebot.plugins.pu.parseConfig as parseConfig
 import littlebot.plugins.pu.dataModel as dataModel
 import littlebot.plugins.pu.generateData as generateData
 import littlebot.plugins.pu.pu
@@ -45,7 +45,7 @@ async def get_event_list_function(bot: Bot, event=Event, session: AsyncSession =
         if "force_flush" in args.extract_plain_text():
             force_flush_flag = True
     event_list = generateData.check_type(await pu.getEventList(user_id, 4, session, force_flush_flag))
-    await bot.send_group_msg(group_id=668569267, message=event_list)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=event_list)
     await session.commit()
 
 
@@ -68,7 +68,7 @@ async def handel2(bot: Bot, search_value: str = ArgPlainText(), matcher=Matcher,
                   session: AsyncSession = Depends(get_session)):
     event_list = generateData.check_type(
         await pu.get_filtered_event_list(matcher.get_arg("search_field"), search_value.strip(), session))
-    await bot.send_private_msg(user_id=3453642726, message=event_list)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=event_list)
 
 
 @join_event_command.handle()
@@ -81,4 +81,4 @@ async def handle(args: Message = CommandArg(), matcher=Matcher):
 async def handel(bot: Bot, matcher=Matcher, session: AsyncSession = Depends(get_session), event=Event):
     user_id = event.get_user_id()
     response = await pu.join_event(user_id, str(matcher.get_arg("actiId")).strip(), False, bot, session)
-    await bot.send_private_msg(user_id=3453642726, message=response)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=response)
