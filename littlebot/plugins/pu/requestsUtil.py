@@ -9,10 +9,11 @@ headers = {
 }
 
 
-
-def requests_eventDetail(actiId):
+def requests_eventDetail(user, actiId):
+    oauth_token = user.oauth_token
+    oauth_token_secret = user.oauth_token_secret
     event_list = requests.get(
-        parseConfig.url_eventDetail() + f"&oauth_token={parseConfig.token_oauth_token()}&oauth_token_secret={parseConfig.token_oauth_token_secret()}&version={parseConfig.version()}&actiId={actiId}")
+        parseConfig.url_eventDetail() + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.version()}&actiId={actiId}")
 
     if not event_list.ok:
         return "获取列表失败"
@@ -22,5 +23,3 @@ def requests_eventDetail(actiId):
     if not eventDetail["content"]:
         return "无数据"
     return eventDetail
-
-

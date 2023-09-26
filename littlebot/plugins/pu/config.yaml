@@ -3,7 +3,4 @@ url:
   eventDetail: https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById  #actiId
   eventNotice: https://pocketuni.net/index.php?app=api&mod=Event&act=newsList
   eventJoin: https://pocketuni.net/index.php?app=api&mod=Event&act=join2
-token:
-  oauth_token: 56400c5389c21ae46852a981242f23e7
-  oauth_token_secret: f93b29476cbfe4a7b453c7c345057ef8
 version: 7.10.0

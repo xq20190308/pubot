@@ -1,6 +1,6 @@
 from nonebot import get_driver, require
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import Bot, Message
+from nonebot.adapters.onebot.v11 import Bot, Message, Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
 from nonebot.params import CommandArg
@@ -32,48 +32,53 @@ config = Config.parse_obj(global_config)
 
 get_event_list_command = on_command("获取活动列表", rule=to_me(), priority=10, block=True)
 get_filtered_event_list_command = on_command("过滤活动列表", rule=to_me(), priority=10, block=True)
-join_event_command = on_command("活动报名",rule=to_me(),priority=10,block=True)
+join_event_command = on_command("活动报名", rule=to_me(), priority=10, block=True)
 
 
 @get_event_list_command.handle()
-async def get_event_list_function(bot: Bot, session: AsyncSession = Depends(get_session), args: Message = CommandArg()):
+async def get_event_list_function(bot: Bot, event=Event, session: AsyncSession = Depends(get_session),
+                                  args: Message = CommandArg()):
     force_flush_flag = False
-
+    # user_info = await bot.get_login_info()
+    user_id = event.get_user_id()
     if args.extract_plain_text():
         if "force_flush" in args.extract_plain_text():
             force_flush_flag = True
-    event_list = generateData.check_type(await pu.getEventList(4, session, force_flush_flag))
-    await bot.send_private_msg(user_id=3453642726, message=event_list)
+    event_list = generateData.check_type(await pu.getEventList(user_id, 4, session, force_flush_flag))
+    await bot.send_group_msg(group_id=668569267, message=event_list)
     await session.commit()
 
 
 @get_filtered_event_list_command.handle()
 async def handel(args: Message = CommandArg(), matcher=Matcher):
     if args.extract_plain_text():
-        matcher.set_arg(key="search_field",message=args)
+        matcher.set_arg(key="search_field", message=args)
 
 
 @get_filtered_event_list_command.got("search_field", prompt="请输入过滤字段")
-async def handel(search_field: str = ArgPlainText(),matcher=Matcher):
+async def handel(search_field: str = ArgPlainText(), matcher=Matcher):
     search_field = search_field.strip()
-    matcher.set_arg("search_field",search_field.strip())
-    if search_field not in ["id", "title", "category", "isJoin"]:
+    matcher.set_arg("search_field", search_field.strip())
+    if search_field not in ["id", "title", "category", "isJoin", "group"]:
         await get_filtered_event_list_command.reject(f"你输入的{search_field}暂不支持检索，请重新输入")
 
 
 @get_filtered_event_list_command.got("search_value", prompt="请输入过滤值")
-async def handel2(bot:Bot,search_value: str = ArgPlainText(),matcher=Matcher,session:AsyncSession = Depends(get_session)):
-    event_list = generateData.check_type(await pu.get_filtered_event_list(matcher.get_arg("search_field"),search_value.strip(),session))
-    await bot.send_private_msg(user_id=3453642726,message=event_list)
+async def handel2(bot: Bot, search_value: str = ArgPlainText(), matcher=Matcher,
+                  session: AsyncSession = Depends(get_session)):
+    event_list = generateData.check_type(
+        await pu.get_filtered_event_list(matcher.get_arg("search_field"), search_value.strip(), session))
+    await bot.send_private_msg(user_id=3453642726, message=event_list)
 
 
 @join_event_command.handle()
-async def handle(args: Message = CommandArg(),matcher=Matcher):
+async def handle(args: Message = CommandArg(), matcher=Matcher):
     if args.extract_plain_text():
-        matcher.set_arg(key="actiId",message=args)
+        matcher.set_arg(key="actiId", message=args)
 
 
-@join_event_command.got("actiId",prompt="请输入活动id")
-async def handel(bot:Bot,matcher = Matcher,session: AsyncSession = Depends(get_session)):
-    response = await pu.join_event(str(matcher.get_arg("actiId")).strip(),False,bot,session)
-    await bot.send_private_msg(user_id=3453642726,message=response)
+@join_event_command.got("actiId", prompt="请输入活动id")
+async def handel(bot: Bot, matcher=Matcher, session: AsyncSession = Depends(get_session), event=Event):
+    user_id = event.get_user_id()
+    response = await pu.join_event(user_id, str(matcher.get_arg("actiId")).strip(), False, bot, session)
+    await bot.send_private_msg(user_id=3453642726, message=response)

@@ -18,7 +18,16 @@ class EventList(Model):
     credit: Mapped[str]
     sTime: Mapped[str]
     eTime: Mapped[str]
+    allow_school: Mapped[str]
+    allow_year: Mapped[str]
     regStartTimeStr: Mapped[str]
     regEndTimeStr: Mapped[str]
     eventStatus: Mapped[int]
     isJoin: Mapped[int]
+
+
+class Users(Model):
+    id: Mapped[str] = mapped_column(primary_key=True)
+    oauth_token: Mapped[str]
+    oauth_token_secret: Mapped[str]
+    is_active: Mapped[int]
