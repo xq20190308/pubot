@@ -146,8 +146,6 @@ def generate_pic(text):
     font_size = 20
     font_color = (0, 0, 0)  # 黑色
     font = ImageFont.truetype('D:\\msyh.ttc', font_size)
-
-    print(text)
     # 计算文本的行数
     text_lines = text.split('\n')
     line_height = font.getbbox(text_lines[0])[3]
