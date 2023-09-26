@@ -75,5 +75,5 @@ async def handle(args: Message = CommandArg(),matcher=Matcher):
 
 @join_event_command.got("actiId",prompt="请输入活动id")
 async def handel(bot:Bot,matcher = Matcher,session: AsyncSession = Depends(get_session)):
-    response = await pu.join_event(str(matcher.get_arg("actiId")).strip(),10,20,False,session)
+    response = await pu.join_event(str(matcher.get_arg("actiId")).strip(),False,bot,session)
     await bot.send_private_msg(user_id=3453642726,message=response)

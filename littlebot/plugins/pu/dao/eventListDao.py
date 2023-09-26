@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 import littlebot.plugins.pu.dataModel as dataModel
 
 
@@ -49,6 +49,13 @@ async def delete_all(session):
     stmt = await session.execute(delete(dataModel.EventList))
     await session.commit()
 
+
+async def update_event_by_id(session, id, isJoin):
+    update_data = {
+        dataModel.EventList.isJoin: isJoin  # 替换为要更新的列和新值
+    }
+    stmt = await session.execute(update(dataModel.EventList).where(dataModel.EventList.id == id).values(update_data))
+    await session.commit()
 
 # 因为 driver.on_startup 无法保证函数运行顺序
 # 如需在 NoneBot 启动时且数据库初始化后运行的函数
