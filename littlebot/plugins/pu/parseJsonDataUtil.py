@@ -18,6 +18,11 @@ def get_isAllowEvent(s):
     return True if s["isAllowEvent"] else False
 
 
+def get_isJoin(s):
+    detail = requestsUtil.requests_eventDetail(get_data(s,"id"))
+    return True if int(detail["content"]["isJoin"])==2 else False
+
+
 def get_reg_start_time(s):
     detail = requestsUtil.requests_eventDetail(get_data(s, "id"))
     time_stamp = detail["content"]["regStartTimeStr"]

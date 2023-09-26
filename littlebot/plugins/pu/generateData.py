@@ -1,3 +1,9 @@
+import base64
+import io
+
+from PIL import Image, ImageDraw, ImageFont
+import filetype
+
 import littlebot.plugins.pu.dao.eventListDao as eventListDao
 import littlebot.plugins.pu.parseJsonDataUtil as parseJsonDataUtil
 
@@ -5,23 +11,29 @@ import littlebot.plugins.pu.parseJsonDataUtil as parseJsonDataUtil
 # 生成数据
 
 # 生成活动列表
-async def generate_event_list(session,event_list_contents=""):
+async def generate_event_list(session, event_list_contents=""):
     data = ""
     if event_list_contents:
         for event_list_content in event_list_contents:
-            title = parseJsonDataUtil.get_data(event_list_content,"title")
-            id = parseJsonDataUtil.get_data(event_list_content,"id")
+            eventStatus = parseJsonDataUtil.get_data(event_list_content, "eventStatus")
+            if eventStatus != 3 and eventStatus != 4:
+                continue
+            title = parseJsonDataUtil.get_data(event_list_content, "title")
+            id = parseJsonDataUtil.get_data(event_list_content, "id")
             regStartTimeStr = parseJsonDataUtil.get_reg_start_time(event_list_content)
             regEndTimeStr = parseJsonDataUtil.get_reg_end_time(event_list_content)
-            sTime = parseJsonDataUtil.get_data(event_list_content,"sTime")
-            eTime = parseJsonDataUtil.get_data(event_list_content,"eTime")
-            category = parseJsonDataUtil.get_data(event_list_content,"category")
-            address = parseJsonDataUtil.get_data(event_list_content,"address")
-            joinCount = parseJsonDataUtil.get_data(event_list_content,"joinCount")
-            limitCount = parseJsonDataUtil.get_data(event_list_content,"limitCount")
-            credit = parseJsonDataUtil.get_data(event_list_content,"credit")
-
-            await eventListDao.insert_event_list(session,id=id, title=title, sTime=sTime, eTime=eTime, regStartTimeStr=regStartTimeStr, regEndTimeStr=regEndTimeStr,address=address,credit=credit,category=category,joinCount=joinCount,limitCount=limitCount)
+            sTime = parseJsonDataUtil.get_data(event_list_content, "sTime")
+            eTime = parseJsonDataUtil.get_data(event_list_content, "eTime")
+            category = parseJsonDataUtil.get_data(event_list_content, "category")
+            address = parseJsonDataUtil.get_data(event_list_content, "address")
+            joinCount = parseJsonDataUtil.get_data(event_list_content, "joinCount")
+            limitCount = parseJsonDataUtil.get_data(event_list_content, "limitCount")
+            credit = parseJsonDataUtil.get_data(event_list_content, "credit")
+            isJoin = parseJsonDataUtil.get_isJoin(event_list_content)
+            await eventListDao.insert_event_list(session, id=id, title=title, sTime=sTime, eTime=eTime,
+                                                 regStartTimeStr=regStartTimeStr, regEndTimeStr=regEndTimeStr,
+                                                 address=address, credit=credit, category=category, joinCount=joinCount,
+                                                 limitCount=limitCount, eventStatus=int(eventStatus),isJoin=int(isJoin))
             session.commit()
             data += f"""
             活动名称：{title}
@@ -29,7 +41,7 @@ async def generate_event_list(session,event_list_contents=""):
             报名时间：{parseJsonDataUtil.format_time(regStartTimeStr)} ~ {parseJsonDataUtil.format_time(regEndTimeStr)}
             活动时间：{parseJsonDataUtil.format_time(sTime)} ~ {parseJsonDataUtil.format_time(eTime)}
             活动类型：{category}
-            地点：{address}  人数：{joinCount}/{int(limitCount)+int(joinCount)}  分数：{credit}  
+            地点：{address}  人数：{joinCount}/{"∞" if int(limitCount) + int(joinCount) > 600000 else int(limitCount) + int(joinCount)}  分数：{credit}
             """
     else:
         event_datas = await eventListDao.select_all(session)
@@ -53,25 +65,29 @@ async def generate_event_list(session,event_list_contents=""):
             报名时间：{parseJsonDataUtil.format_time(regStartTimeStr)} ~ {parseJsonDataUtil.format_time(regEndTimeStr)}
             活动时间：{parseJsonDataUtil.format_time(sTime)} ~ {parseJsonDataUtil.format_time(eTime)}
             活动类型：{category}
-            地点：{address}  人数：{joinCount}/{int(limitCount) + int(joinCount)}  分数：{credit}  
+            地点：{address}  人数：{joinCount}/{"∞" if int(limitCount) + int(joinCount) > 600000 else int(limitCount) + int(joinCount)}  分数：{credit}  
             """
     return '\n'.join("    " + line.strip() for line in data.strip().split('\n'))
 
 
-async def generate_filtered_event(search_field,search_value,session):
+async def generate_filtered_event(search_field, search_value, session):
     event_data = ""
     data = ""
     match search_field:
         case "id":
-            event_data = await eventListDao.select_event_by_id(session,search_value)
+            event_data = await eventListDao.select_event_by_id(session, search_value)
         case "category":
-            event_data = await eventListDao.select_event_by_category(session,search_value)
+            event_data = await eventListDao.select_event_by_category(session, search_value)
         case "title":
-            event_data = await eventListDao.select_event_by_title(session,search_value)
+            event_data = await eventListDao.select_event_by_title(session, search_value)
+        case "eventStatus":
+            event_data = await eventListDao.select_event_by_eventStatus(session, search_value)
+        case "isJoin":
+            event_data = await eventListDao.select_event_by_isJoin(session, search_value)
     if not event_data:
         return "error"
 
-    if isinstance(event_data,list):
+    if isinstance(event_data, list):
         print(1)
         for event_data in event_data:
             title = event_data[0].title
@@ -85,13 +101,14 @@ async def generate_filtered_event(search_field,search_value,session):
             joinCount = event_data[0].joinCount
             limitCount = event_data[0].limitCount
             credit = event_data[0].credit
+            isJoin = event_data[0].isJoin
             data += f"""
             活动名称：{title}
             活动ID：{id}
             报名时间：{regStartTimeStr} ~ {regEndTimeStr}
             活动时间：{sTime} ~ {eTime}
             活动类型：{category}
-            地点：{address}  人数：{joinCount}/{int(limitCount) + int(joinCount)}  分数：{credit}  
+            地点：{address}  人数：{joinCount}/{"∞" if int(limitCount) + int(joinCount) > 600000 else int(limitCount) + int(joinCount)}  分数：{credit}  
             """
     else:
         title = event_data.title
@@ -111,6 +128,47 @@ async def generate_filtered_event(search_field,search_value,session):
         报名时间：{regStartTimeStr} ~ {regEndTimeStr}
         活动时间：{sTime} ~ {eTime}
         活动类型：{category}
-        地点：{address}  人数：{joinCount}/{int(limitCount) + int(joinCount)}  分数：{credit}  
+        地点：{address}  人数：{joinCount}/{"∞" if int(limitCount) + int(joinCount) > 600000 else int(limitCount) + int(joinCount)}  分数：{credit}  
         """
     return '\n'.join("    " + line.strip() for line in data.strip().split('\n'))
+
+
+def generate_pic(text):
+    # 选择字体和文字颜色
+    font_size = 20
+    font_color = (0, 0, 0)  # 黑色
+    font = ImageFont.truetype('D:\\msyh.ttc', font_size)
+
+    # 计算文本的行数
+    text_lines = text.split('\n')
+    line_height = font.getbbox(text_lines[0])[3]
+    num_lines = len(text_lines)
+
+    # 计算图片高度
+    height = num_lines * line_height
+
+    # 创建图像
+    width = 900
+    background_color = (255, 255, 255)  # 白色
+    image = Image.new('RGB', (width, height), background_color)
+
+    # 创建一个绘图对象
+    draw = ImageDraw.Draw(image)
+
+    # 在图像上绘制文本
+    text_x, text_y = 0, 0
+    for line in text_lines:
+        draw.text((text_x, text_y), line, font=font, fill=font_color)
+        text_y += line_height
+
+    buffer = io.BytesIO()
+    image.save(buffer, "JPEG")
+    return buffer.getvalue()
+
+
+def check_type(data):
+    if not isinstance(data, str):
+        file_type = filetype.guess(data)
+        if file_type.mime == "image/jpeg" or file_type.mime == "image/png":
+            return f"[CQ:image,file=base64://{base64.b64encode(data).decode()}]"
+    return data

@@ -20,3 +20,5 @@ class EventList(Model):
     eTime: Mapped[str]
     regStartTimeStr: Mapped[str]
     regEndTimeStr: Mapped[str]
+    eventStatus: Mapped[int]
+    isJoin: Mapped[int]

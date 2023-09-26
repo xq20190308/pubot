@@ -11,6 +11,7 @@ from nonebot_plugin_datastore import get_plugin_data, get_session
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 import littlebot.plugins.pu.dataModel as dataModel
+import littlebot.plugins.pu.generateData as generateData
 import littlebot.plugins.pu.pu
 from .config import Config
 
@@ -41,7 +42,7 @@ async def get_event_list_function(bot: Bot, session: AsyncSession = Depends(get_
     if args.extract_plain_text():
         if "force_flush" in args.extract_plain_text():
             force_flush_flag = True
-    event_list = await pu.getEventList(1, session, force_flush_flag)
+    event_list = generateData.check_type(await pu.getEventList(4, session, force_flush_flag))
     await bot.send_private_msg(user_id=3453642726, message=event_list)
     await session.commit()
 
@@ -53,14 +54,16 @@ async def handel(args: Message = CommandArg(), matcher=Matcher):
 
 
 @get_filtered_event_list_command.got("search_field", prompt="请输入过滤字段")
-async def handel(search_field: str = str(ArgPlainText()).strip()):
-    if search_field not in ["id", "title", "category"]:
+async def handel(search_field: str = ArgPlainText(),matcher=Matcher):
+    search_field = search_field.strip()
+    matcher.set_arg("search_field",search_field.strip())
+    if search_field not in ["id", "title", "category", "isJoin"]:
         await get_filtered_event_list_command.reject(f"你输入的{search_field}暂不支持检索，请重新输入")
 
 
 @get_filtered_event_list_command.got("search_value", prompt="请输入过滤值")
 async def handel2(bot:Bot,search_value: str = ArgPlainText(),matcher=Matcher,session:AsyncSession = Depends(get_session)):
-    event_list = await pu.get_filtered_event_list(matcher.get_arg("search_field"),search_value.strip(),session)
+    event_list = generateData.check_type(await pu.get_filtered_event_list(matcher.get_arg("search_field"),search_value.strip(),session))
     await bot.send_private_msg(user_id=3453642726,message=event_list)
 
 

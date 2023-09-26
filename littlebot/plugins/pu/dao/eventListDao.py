@@ -6,10 +6,11 @@ import littlebot.plugins.pu.dataModel as dataModel
 
 async def insert_event_list(session, id, title, category, address, joinCount, limitCount, credit, sTime, eTime,
                             regStartTimeStr,
-                            regEndTimeStr):
+                            regEndTimeStr, eventStatus,isJoin):
     example = dataModel.EventList(id=int(id), title=title, category=category, address=address, joinCount=int(joinCount),
                                   limitCount=int(limitCount), credit=credit, sTime=sTime, eTime=eTime,
-                                  regStartTimeStr=regStartTimeStr, regEndTimeStr=regEndTimeStr)
+                                  regStartTimeStr=regStartTimeStr, regEndTimeStr=regEndTimeStr,
+                                  eventStatus=eventStatus,isJoin=isJoin)
     session.add(example)
     await session.commit()
 
@@ -17,6 +18,11 @@ async def insert_event_list(session, id, title, category, address, joinCount, li
 async def select_event_by_id(session, id):
     stmt = await session.execute(select(dataModel.EventList).where(dataModel.EventList.id == id))
     return stmt.scalar()
+
+
+async def select_event_by_eventStatus(session, eventStatus):
+    stmt = await session.execute(select(dataModel.EventList).where(dataModel.EventList.eventStatus == eventStatus))
+    return stmt.fetchall()
 
 
 async def select_event_by_title(session, title):
@@ -28,6 +34,12 @@ async def select_event_by_category(session, category):
     stmt = await session.execute(select(dataModel.EventList).where(dataModel.EventList.category == category))
     return stmt.fetchall()
 
+
+async def select_event_by_isJoin(session, isJoin):
+    stmt = await session.execute(select(dataModel.EventList).where(dataModel.EventList.isJoin == isJoin))
+    return stmt.fetchall()
+
+
 async def select_all(session):
     stmt = await session.execute(select(dataModel.EventList))
     return stmt.fetchall()
@@ -35,8 +47,7 @@ async def select_all(session):
 
 async def delete_all(session):
     stmt = await session.execute(delete(dataModel.EventList))
-    await stmt.commit()
-
+    await session.commit()
 
 
 # 因为 driver.on_startup 无法保证函数运行顺序
