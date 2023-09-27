@@ -15,7 +15,7 @@ from nonebot_plugin_apscheduler import scheduler
 
 
 # 获取活动列表
-async def getEventList(user_id, page, session, force_flush=False):
+async def getEventList(user_id, page, session, force_flush=False, flush_timer=False):
     # print(parseConfig.url_eventList()+f"&oauth_token={parseConfig.token_oauth_token()}&oauth_token_secret={parseConfig.token_oauth_token_secret()}&page={page}")
     user_info = await usersdao.select_user_by_id(session, user_id)
     oauth_token = user_info.oauth_token
@@ -47,6 +47,8 @@ async def getEventList(user_id, page, session, force_flush=False):
         all_event_list = await generateData.generate_event_list(session, user)
         if all_event_list == "error":
             all_event_list = await getEventList(user_id, page, session, True)
+    if flush_timer:
+        return "ok"
     return generateData.generate_pic(all_event_list)
 
 
@@ -69,7 +71,6 @@ async def join_event(user_id, actiId, timer, bot, session):
 
     if event_regStartTime - current_time > 10:
         event_regStartTime = datetime.fromtimestamp(event_regStartTime)  # 转换为 datetime 对象
-        print(event_regStartTime)
         scheduler.add_job(
             timer_join,  # 指定要运行的函数
             user,
@@ -90,6 +91,13 @@ async def join_event(user_id, actiId, timer, bot, session):
             return "token过期"
         print(res_list.text)
         return json.loads(res_list.text)["msg"]
+
+
+async def timer_flush(bot, user_id, page, session):
+    res = await getEventList(user_id, page, session, True,True)
+    if res == "ok":
+        res = "刷新成功"
+    await bot.send_private_msg(3453642726,res)
 
 
 # 定时报名任务
