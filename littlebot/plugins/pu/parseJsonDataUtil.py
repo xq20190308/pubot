@@ -1,7 +1,7 @@
 import time
 import littlebot.plugins.pu.requestsUtil as requestsUtil
 
-
+#解析config.yaml
 def get_data(s, name):
     # if "time" in name.lower():
     #     return format_time(s[name])

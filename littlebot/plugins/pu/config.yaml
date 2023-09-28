@@ -3,6 +3,8 @@ url:
   eventDetail: https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById  #actiId
   eventNotice: https://pocketuni.net/index.php?app=api&mod=Event&act=newsList
   eventJoin: https://pocketuni.net/index.php?app=api&mod=Event&act=join2
+  eventCancel: https://pocketuni.net/index.php?app=api&mod=Event&act=cancelEvent
+  eventSign: https://pocketuni.net/index.php?app=api&mod=Event&act=SignOnline
 version: 7.10.0
 group_id: 668569267
-admin_id: 3453642726
+admin_id: "3453642726"

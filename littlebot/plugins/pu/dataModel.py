@@ -28,6 +28,7 @@ class EventList(Model):
 
 class Users(Model):
     id: Mapped[str] = mapped_column(primary_key=True)
+    uid: Mapped[int]
     oauth_token: Mapped[str]
     oauth_token_secret: Mapped[str]
     is_active: Mapped[int]

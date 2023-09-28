@@ -12,6 +12,7 @@ from nonebot.adapters.onebot.v11 import Bot
 
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
+import littlebot.plugins.pu.requestsUtil as requestsUtil
 
 
 # 获取活动列表
@@ -30,7 +31,8 @@ async def getEventList(user_id, page, session, force_flush=False, flush_timer=Fa
             # res_event_lists = grequests.map(event_list)
 
             res_event_lists = requests.get(
-                parseConfig.get_config("eventList") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&page={i + 1}")
+                parseConfig.get_config(
+                    "eventList") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&page={i + 1}")
             if not res_event_lists.ok:
                 return "获取列表失败"
             eventList = json.loads(res_event_lists.text)
@@ -60,55 +62,71 @@ async def get_filtered_event_list(search_field, search_value, session):
     return generateData.generate_pic(res)
 
 
-async def join_event(user_id, actiId, timer, bot, session):
+async def join_event(user_id, actiId, bot, session):
     event = await eventListDao.select_event_by_id(session, actiId)
+    if not event:
+        return "数据库中未查到该活动，请尝试先获取活动列表！"
     user_info = await usersdao.select_user_by_id(session, user_id)
     oauth_token = user_info.oauth_token
     oauth_token_secret = user_info.oauth_token_secret
     user = User(user_id, oauth_token, oauth_token_secret)
     event_regStartTime = float(event.regStartTimeStr)
+    event_regEndTime = float(event.regEndTimeStr)
     current_time = time.time()
-
-    if event_regStartTime - current_time > 10:
-        event_regStartTime = datetime.fromtimestamp(event_regStartTime)  # 转换为 datetime 对象
+    res = ""
+    is_past = True
+    if (current_time < event_regStartTime):
+        is_past = False
+        res = f"未达到活动报名时间，将于 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(event_regStartTime))} 自动签到"
+    event_regStartTime = datetime.fromtimestamp(event_regStartTime)  # 转换为 datetime 对象
+    if is_past:
+        await timer_join(bot, user, session, actiId)
+    else:
         scheduler.add_job(
             timer_join,  # 指定要运行的函数
-            user,
             "date",  # 定时任务类型，这里使用 "date" 表示一次性定时任务
             next_run_time=event_regStartTime,  # 传递 datetime 对象作为下次运行的时间
-            args=(bot, session, actiId),  # 传递给函数的参数，使用元组
+            args=(bot, user, session, actiId),  # 传递给函数的参数，使用元组
         )
-        return f"未达到活动报名时间，将于 {event_regStartTime.strftime('%Y-%m-%d %H:%M:%S')} 自动签到"
-    else:
-        res_list = requests.get(
-            parseConfig.get_config("eventJoin") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
-        # res_list = grequests.map(req_list, size=size)[0]
+        return res
 
-        if not res_list.ok:
-            return "报名失败，未知原因"
-        join_event: dict = json.loads(res_list.text)
-        if not "msg" in join_event.keys():
-            return "token过期"
-        print(res_list.text)
-        return json.loads(res_list.text)["msg"]
+
+async def cancel_event(user_id, actiId, session):
+    user_info = await usersdao.select_user_by_id(session, user_id)
+    oauth_token = user_info.oauth_token
+    oauth_token_secret = user_info.oauth_token_secret
+    user = User(user_id, oauth_token, oauth_token_secret)
+    res = requestsUtil.requests_cancel_event(user, actiId)
+    return res
+
+
+async def sign(user_id, actiId, type, session):
+    user = await usersdao.select_user_by_id(session, user_id)
+    oauth_token = user.oauth_token
+    oauth_token_secret = user.oauth_token_secret
+    uid = user.oauth_token_secret
+    user = User(user_id, oauth_token, oauth_token_secret, uid)
+    return requestsUtil.requests_sign(user, actiId, type)
 
 
 async def timer_flush(bot, user_id, page, session):
-    res = await getEventList(user_id, page, session, True,True)
+    res = await getEventList(user_id, page, session, True, True)
     if res == "ok":
         res = "刷新成功"
-    await bot.send_private_msg(3453642726,res)
+    await bot.send_private_msg(3453642726, res)
 
 
 # 定时报名任务
 async def timer_join(bot: Bot, user, session, actiId):
-    result = ""
+    result = f"[CQ:at,qq={int(user.user_id)}] 活动id：{actiId} "
     oauth_token = user.oauth_token
     oauth_token_secret = user.oauth_token_secret
     res_list = requests.get(
-        parseConfig.get_config('eventJoin') + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
+        parseConfig.get_config(
+            'eventJoin') + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&id={actiId}")
     if not res_list.ok:
-        result = "报名失败，未知原因"
-    result = json.loads(res_list.text)["msg"]
-    await bot.send_private_msg(user_id=3453642726, message=result)
+        result += "报名失败，未知原因"
+    result += json.loads(res_list.text)['msg']
+    print(result)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=result)
     # await eventListDao.update_event_by_id(session,actiId,isJoin)

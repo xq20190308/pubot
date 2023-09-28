@@ -1,11 +1,11 @@
-from typing import Tuple
+from typing import Tuple, Annotated
 
 from nonebot import get_driver, require
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, Message, Event
 from nonebot.internal.matcher import Matcher
 from nonebot.internal.params import ArgPlainText
-from nonebot.params import CommandArg, Command
+from nonebot.params import CommandArg, Command, CommandStart, RawCommand
 from nonebot.params import Depends
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import to_me
@@ -36,29 +36,30 @@ global_config = get_driver().config
 config = Config.parse_obj(global_config)
 
 
-#管理员权限
-async def admin_permission(event:Event):
+# 管理员权限
+async def admin_permission(event: Event):
     if event.get_user_id() == parseConfig.get_config("admin_id"):
         return True
     return False
 
 
-async def user_permission(bot:Bot, event:Event,session: AsyncSession = Depends(get_session)):
-    user = await usersdao.select_user_by_id(session,event.get_user_id())
-    if user.is_active==1:
-        return True
-    else:
-        await bot.send_group_msg(group_id=parseConfig.get_config("group_id"),message=f"[CQ:at,qq={event.get_user_id()}]账号未激活，您无法使用该bot o(╥﹏╥)o")
-        return False
+# async def user_permission(bot:Bot, event:Event):
+#     user = await usersdao.select_user_by_id(session,event.get_user_id())
+#     if user.is_active==1:
+#         return True
+#     else:
+#         await bot.send_group_msg(group_id=parseConfig.get_config("group_id"),message=f"[CQ:at,qq={event.get_user_id()}]账号未激活，您无法使用该bot o(╥﹏╥)o")
+#         return False
 
-
-
-get_event_list_command = on_command("获取活动列表", rule=to_me(), permission=user_permission,priority=10, block=True)
-get_filtered_event_list_command = on_command("过滤活动列表", rule=to_me(),permission=user_permission, priority=10, block=True)
-join_event_command = on_command("活动报名", rule=to_me(),permission=user_permission, priority=10, block=True)
+help_command = on_command("帮助", rule=to_me(), priority=10, block=True)
+get_event_list_command = on_command("获取活动列表", rule=to_me(), priority=10, block=True)
+get_filtered_event_list_command = on_command("过滤活动列表", rule=to_me(), priority=10, block=True)
+join_event_command = on_command("活动报名", rule=to_me(), priority=10, block=True)
+cancel_event_command = on_command("取消报名", rule=to_me(), priority=10, block=True)
 flush_timer_command = on_command(("列表自动刷新", "on"), rule=to_me(), aliases={("列表自动刷新", "off")}, priority=10,
                                  block=True, permission=admin_permission)
-sign_command = on_command("签到",rule=to_me(),aliases={"签退"},priority=10,block=True,permission=admin_permission)
+sign_command = on_command("签到", rule=to_me(), aliases={"签退"}, priority=10, block=True, permission=admin_permission)
+
 
 @get_event_list_command.handle()
 async def get_event_list_function(bot: Bot, event=Event, session: AsyncSession = Depends(get_session),
@@ -96,6 +97,18 @@ async def handel2(bot: Bot, search_value: str = ArgPlainText(), matcher=Matcher,
     await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=event_list)
 
 
+@sign_command.handle()
+async def _(bot: Bot, cmd: Annotated[tuple[str, ...], Command()], arg: Message = CommandArg(), event=Event,
+            session: AsyncSession = Depends(get_session)):
+    user_id = event.get_user_id()
+    if cmd[0] == "签到":
+        type = 1
+    else:
+        type = 2
+    res = await pu.sign(user_id, arg.extract_plain_text(), type, session)
+    await bot.send_private_msg(user_id=3453642726, message=res)
+
+
 @join_event_command.handle()
 async def handle(args: Message = CommandArg(), matcher=Matcher):
     if args.extract_plain_text():
@@ -105,13 +118,27 @@ async def handle(args: Message = CommandArg(), matcher=Matcher):
 @join_event_command.got("actiId", prompt="请输入活动id")
 async def handel(bot: Bot, matcher=Matcher, session: AsyncSession = Depends(get_session), event=Event):
     user_id = event.get_user_id()
-    response = await pu.join_event(user_id, str(matcher.get_arg("actiId")).strip(), False, bot, session)
-    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=response)
+    response = await pu.join_event(user_id, str(matcher.get_arg("actiId")).strip(), bot, session)
+    if response:
+        await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=response)
+
+
+@cancel_event_command.handle()
+async def handle(args: Message = CommandArg(), matcher=Matcher):
+    if args.extract_plain_text():
+        matcher.set_arg(key="actiId", message=args)
+
+
+@cancel_event_command.got("actiId", prompt="请输入活动id")
+async def handel(bot: Bot, matcher=Matcher, session: AsyncSession = Depends(get_session), event=Event):
+    user_id = event.get_user_id()
+    response = await pu.cancel_event(user_id, str(matcher.get_arg("actiId")).strip(), session)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=f"[CQ:at,qq={user_id}] " + response)
 
 
 @flush_timer_command.handle()
-async def handle(bot: Bot, cmd: Tuple[str, str] = Command(), event=Event, session: AsyncSession = Depends(get_session)):
-    _,action = cmd
+async def handle(bot: Bot, arg: Message = CommandArg(), event=Event, session: AsyncSession = Depends(get_session)):
+    action = arg.extract_plain_text()
     match action:
         case "on":
             user_id = event.get_user_id()
@@ -126,3 +153,17 @@ async def handle(bot: Bot, cmd: Tuple[str, str] = Command(), event=Event, sessio
             scheduler.remove_job(id="flush_timer")
 
 
+@help_command.handle()
+async def _(bot: Bot):
+    message = """
+    欢迎来到pu-bot ━(*｀∀´*)ノ亻!
+    下面是本bot的使用命令
+    /获取活动列表：获取活动列表
+    /过滤活动列表：根据自己的需要输入字段，字段名如下：
+        1. id：活动id
+        2. title：活动标题
+        3. category：活动分类
+        4. group：特定分组
+    /活动报名：报名活动，若为到报名时间，则自动设置为定时报名
+    """
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=message)
