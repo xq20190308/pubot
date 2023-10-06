@@ -50,7 +50,7 @@ async def admin_permission(event: Event):
 #     else:
 #         await bot.send_group_msg(group_id=parseConfig.get_config("group_id"),message=f"[CQ:at,qq={event.get_user_id()}]账号未激活，您无法使用该bot o(╥﹏╥)o")
 #         return False
-
+login_command = on_command("登录", rule=to_me(), priority=10, block=True)
 help_command = on_command("帮助", rule=to_me(), priority=10, block=True)
 get_event_list_command = on_command("获取活动列表", rule=to_me(), priority=10, block=True)
 get_filtered_event_list_command = on_command("过滤活动列表", rule=to_me(), priority=10, block=True)
@@ -59,6 +59,29 @@ cancel_event_command = on_command("取消报名", rule=to_me(), priority=10, blo
 flush_timer_command = on_command(("列表自动刷新", "on"), rule=to_me(), aliases={("列表自动刷新", "off")}, priority=10,
                                  block=True, permission=admin_permission)
 sign_command = on_command("签到", rule=to_me(), aliases={"签退"}, priority=10, block=True, permission=admin_permission)
+
+
+@login_command.handle()
+async def handel(args: Message = CommandArg(), matcher=Matcher):
+    if args.extract_plain_text():
+        matcher.set_arg(key="student_number", message=args)
+
+
+@login_command.got("student_number", prompt="请输入学号")
+async def handel(student_number: str = ArgPlainText(), matcher=Matcher):
+    student_number = student_number.strip()
+    if not student_number.isdigit():
+        await login_command.reject(f"您输入的学号{student_number}不合法，请重新输入：")
+
+@login_command.got("password", prompt="请输入密码")
+async def _(bot:Bot,password: str = ArgPlainText(),matcher=Matcher,event=Event,session: AsyncSession = Depends(get_session)):
+    user_id = event.get_user_id()
+    email = matcher.get_arg("student_number") + "@" + parseConfig.get_config("school_email")
+    password = password.strip()
+    print(type(email))
+    res = await pu.login(user_id=user_id,email=email.extract_plain_text(),password=password,session=session)
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"),message=f"[CQ:at,qq={user_id}]{res}")
+
 
 
 @get_event_list_command.handle()
@@ -106,7 +129,7 @@ async def _(bot: Bot, cmd: Annotated[tuple[str, ...], Command()], arg: Message =
     else:
         type = 2
     res = await pu.sign(user_id, arg.extract_plain_text(), type, session)
-    await bot.send_private_msg(user_id=3453642726, message=res)
+    await bot.send_private_msg(user_id=int(parseConfig.get_config("admin_id")), message=res)
 
 
 @join_event_command.handle()
@@ -137,8 +160,10 @@ async def handel(bot: Bot, matcher=Matcher, session: AsyncSession = Depends(get_
 
 
 @flush_timer_command.handle()
-async def handle(bot: Bot, arg: Message = CommandArg(), event=Event, session: AsyncSession = Depends(get_session)):
-    action = arg.extract_plain_text()
+async def handle(bot: Bot, cmd: Tuple[str, str] = Command(), event=Event, session: AsyncSession = Depends(get_session)):
+    # action = arg.extract_plain_text()
+    _, action = cmd
+    print(action)
     match action:
         case "on":
             user_id = event.get_user_id()
@@ -149,8 +174,11 @@ async def handle(bot: Bot, arg: Message = CommandArg(), event=Event, session: As
                 id="flush_timer",
                 args=(bot, user_id, 4, session)
             )
+            res = "定时刷新开启成功"
         case "off":
             scheduler.remove_job(id="flush_timer")
+            res = ("定时刷新关闭成功")
+    await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=res)
 
 
 @help_command.handle()
@@ -165,5 +193,6 @@ async def _(bot: Bot):
         3. category：活动分类
         4. group：特定分组
     /活动报名：报名活动，若为到报名时间，则自动设置为定时报名
+    /取消报名：取消报名活动
     """
     await bot.send_group_msg(group_id=parseConfig.get_config("group_id"), message=message)

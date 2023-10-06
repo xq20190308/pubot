@@ -1,4 +1,5 @@
 url:
+  eventLogin: https://pocketuni.net/index.php?app=api&mod=Sitelist&act=login
   eventList: https://pocketuni.net/index.php?app=api&mod=Event&act=newEventList
   eventDetail: https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById  #actiId
   eventNotice: https://pocketuni.net/index.php?app=api&mod=Event&act=newsList
@@ -7,4 +8,5 @@ url:
   eventSign: https://pocketuni.net/index.php?app=api&mod=Event&act=SignOnline
 version: 7.10.0
 group_id: 668569267
-admin_id: "3453642726"
+admin_id: "3538186224"
+school_email: "sdust.com"

@@ -9,6 +9,21 @@ headers = {
 }
 
 
+def requests_login(email, password):
+    res = requests.get(
+        parseConfig.get_config(
+            "eventLogin") + f"&email={email}&password={password}")
+
+    res_login:dict = json.loads(res.text)
+    print(res_login)
+    if "message" in res_login.keys():
+        return res_login["message"]
+    if "userToken" not in res_login.keys():
+        return "登录时发生未知错误！"
+
+    return res_login["userToken"]
+
+
 def requests_cancel_event(user, actiId):
     oauth_token = user.oauth_token
     oauth_token_secret = user.oauth_token_secret
@@ -47,3 +62,20 @@ def requests_eventDetail(user, actiId):
     if not eventDetail["content"]:
         return "无数据"
     return eventDetail
+
+def requests_eventLists(user, page):
+    oauth_token = user.oauth_token
+    oauth_token_secret = user.oauth_token_secret
+    res_event_lists = requests.get(
+        parseConfig.get_config(
+            "eventList") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&page={page}")
+    if not res_event_lists.ok:
+        return "error获取列表失败"
+    eventList = json.loads(res_event_lists.text)
+    if eventList["code"] != 0:
+        return "error权限不足，请检查token是否过期"
+    if not eventList["content"]:
+        return "error无数据"
+    if type(eventList) == 'str':
+        return "error"+eventList
+    return eventList

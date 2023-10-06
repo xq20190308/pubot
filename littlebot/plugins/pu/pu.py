@@ -15,10 +15,32 @@ from nonebot_plugin_apscheduler import scheduler
 import littlebot.plugins.pu.requestsUtil as requestsUtil
 
 
+async def login(user_id, email, password, session):
+    user_info = await usersdao.select_user_by_id(session, user_id)
+    if user_info:
+        oauth_token = user_info.oauth_token
+        oauth_token_secret = user_info.oauth_token_secret
+        user = User(user_id, oauth_token, oauth_token_secret)
+        res_test = requestsUtil.requests_eventLists(user, 1)
+        if not (isinstance(res_test, str) and res_test[0:5] == "error"):
+            return "登陆成功"
+    # 数据库中没有该用户信息，或者token过期
+    res_login = requestsUtil.requests_login(email, password)
+    if isinstance(res_login,dict) and res_login["oauth_token"] and res_login["oauth_token_secret"]:
+        print(type(email))
+        await usersdao.insert_user(session=session,user_id=user_id, email=email, password=password,
+                                   oauth_token=res_login["oauth_token"],
+                                   oauth_token_secret=res_login["oauth_token_secret"], is_active=1)
+        return "登录成功"
+    return res_login
+
+
 # 获取活动列表
 async def getEventList(user_id, page, session, force_flush=False, flush_timer=False):
     # print(parseConfig.url_eventList()+f"&oauth_token={parseConfig.token_oauth_token()}&oauth_token_secret={parseConfig.token_oauth_token_secret()}&page={page}")
     user_info = await usersdao.select_user_by_id(session, user_id)
+    if not user_info:
+        return '未找到该用户信息，请先输入"/登录"'
     oauth_token = user_info.oauth_token
     oauth_token_secret = user_info.oauth_token_secret
     user = User(user_id, oauth_token, oauth_token_secret)
@@ -30,19 +52,10 @@ async def getEventList(user_id, page, session, force_flush=False, flush_timer=Fa
             # event_list = requests.get(parseConfig.url_eventList()+f"&oauth_token={parseConfig.token_oauth_token()}&oauth_token_secret={parseConfig.token_oauth_token_secret()}&version={parseConfig.version()}&page={i}")
             # res_event_lists = grequests.map(event_list)
 
-            res_event_lists = requests.get(
-                parseConfig.get_config(
-                    "eventList") + f"&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}&version={parseConfig.get_config('version')}&page={i + 1}")
-            if not res_event_lists.ok:
-                return "获取列表失败"
-            eventList = json.loads(res_event_lists.text)
-            if eventList["code"] != 0:
-                return "权限不足，请检查token是否过期"
-            if not eventList["content"]:
-                return "无数据"
-            if type(eventList) == 'str':
-                return eventList
-            all_event_list += await generateData.generate_event_list(session, user, eventList["content"])
+            event_list = requestsUtil.requests_eventLists(user, i + 1)
+            if isinstance(event_list, str) and event_list[0:5] == "error":
+                return event_list[5:]
+            all_event_list += await generateData.generate_event_list(session, user, event_list["content"])
             all_event_list += "\n\n"
 
     else:
@@ -93,6 +106,8 @@ async def join_event(user_id, actiId, bot, session):
 
 async def cancel_event(user_id, actiId, session):
     user_info = await usersdao.select_user_by_id(session, user_id)
+    if not user_info:
+        return '未找到该用户信息，请先输入"/登录"'
     oauth_token = user_info.oauth_token
     oauth_token_secret = user_info.oauth_token_secret
     user = User(user_id, oauth_token, oauth_token_secret)
@@ -102,6 +117,8 @@ async def cancel_event(user_id, actiId, session):
 
 async def sign(user_id, actiId, type, session):
     user = await usersdao.select_user_by_id(session, user_id)
+    if not user_info:
+        return '未找到该用户信息，请先输入"/登录"'
     oauth_token = user.oauth_token
     oauth_token_secret = user.oauth_token_secret
     uid = user.oauth_token_secret
@@ -113,7 +130,7 @@ async def timer_flush(bot, user_id, page, session):
     res = await getEventList(user_id, page, session, True, True)
     if res == "ok":
         res = "刷新成功"
-    await bot.send_private_msg(3453642726, res)
+    await bot.send_private_msg(user_id=int(parseConfig.get_config("admin_id")), message=res)
 
 
 # 定时报名任务
